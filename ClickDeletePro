@@ -1,0 +1,55 @@
+--- A new version of Click Delete that is updated to disallow deleting props that are directly under the character and disallows deleting other players characters to avoid breaking the game.
+--- Made by baable on discord 
+wait(15)
+pcall(function()
+    -- Hold CTRL and click to delete parts (you need to rejoin if you delete something wrong)
+    local Plr = game:GetService("Players").LocalPlayer
+    local Mouse = Plr:GetMouse()
+    local Character = Plr.Character or Plr.CharacterAdded:Wait()
+
+    -- Function to check if the target's parent is a character
+    local function isParentCharacter(target)
+        local parent = target.Parent
+        return parent:IsA("Model") and parent:FindFirstChild("Humanoid")
+    end
+
+    -- Function to check if the target is a body part of the player's character
+    local function isPlayerBodyPart(target)
+        for _, part in ipairs(Character:GetChildren()) do
+            if target == part then
+                return true
+            end
+        end
+        return false
+    end
+
+    Mouse.Button2Down:Connect(function()
+        if not game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftControl) then return end
+        if not Mouse.Target then return end
+        
+        local targetPosition = Mouse.Target.Position
+        local characterPosition = Character.PrimaryPart.Position
+        
+        -- Check if the target is below the character's feet
+        if targetPosition.Y < characterPosition.Y then
+            print("Cannot delete: Target is below the character's feet.")
+            return
+        end
+        
+        -- Check if the target is part of the player's character
+        if isParentCharacter(Mouse.Target) then
+            print("Cannot delete: Target's parent is a character.")
+            return
+        end
+
+        -- Check if the target is a body part of the player's character
+        if isPlayerBodyPart(Mouse.Target) then
+            print("Cannot delete: Target is a body part of the player's character.")
+            return
+        end
+        
+        -- Delete the target
+        Mouse.Target:Destroy()
+        print("Deleted target:", Mouse.Target.Name)
+    end)
+end)
