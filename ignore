@@ -1,0 +1,46 @@
+-- Don't worry about this one
+wait (1)
+-- Check if the game ID matches
+if game.PlaceId ~= 13643807539 then
+    return -- Exit the script if the game ID does not match
+end
+
+-- Get the Players service
+local Players = game:GetService("Players")
+
+-- Function to check for ProximityPrompt and its Enabled state
+local function checkProximityPrompts()
+    while true do
+        wait(0.1) -- Check every 0.1 seconds
+        for _, player in pairs(Players:GetPlayers()) do
+            local character = player.Character
+            if character then
+                local upperTorso = character:FindFirstChild("UpperTorso")
+                if upperTorso then
+                    local proximityPrompt = upperTorso:FindFirstChildOfClass("ProximityPrompt")
+                    if proximityPrompt and proximityPrompt.Enabled then
+                        -- Replace `distance` with an actual value if needed
+                        fireproximityprompt(proximityPrompt, distance)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Start the checking function
+checkProximityPrompts()
+
+-- Connect to PlayerAdded to check for new players
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        -- Check immediately after the character is added
+        local upperTorso = character:WaitForChild("UpperTorso", 5) -- Wait for UpperTorso to be added
+        if upperTorso then
+            local proximityPrompt = upperTorso:WaitForChildOfClass("ProximityPrompt", 5) -- Wait for ProximityPrompt
+            if proximityPrompt and proximityPrompt.Enabled then
+                -- Optionally do something here if needed
+            end
+        end
+    end)
+end)
