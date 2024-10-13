@@ -1,0 +1,165 @@
+wait (1)
+-- Check if the game ID matches
+if game.PlaceId ~= 13643807539 then
+    return -- Exit the script if the game ID does not match
+end
+
+-- Get the Players service
+local Players = game:GetService("Players")
+
+-- Ignore List
+local ignoreList = {
+    "Fist",
+    "Phone",
+    "Standard Clip",
+    "Speed Loader",
+    "Extended Clip",
+    "Heavy Magazine",
+    "Drum Magazine",
+    "Card",
+    "Fake ID",
+    "Hot Chips",
+    "Potato",
+    "Flour",
+    "Knife",
+    "Mask",  -- For tools ending with "Mask"
+    "Crate",
+    "Machete"  -- Added "Potato Chips" to the ignore list
+}
+
+-- Function to check if a tool should be ignored
+local function isIgnored(toolName)
+    for _, name in ipairs(ignoreList) do
+        if toolName == name or (name == "Mask" and toolName:sub(-#name) == name) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to create a BillboardGui above a player's head
+local function createBillboardGui(player)
+    local function setupBillboard(head)
+        -- Create BillboardGui
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Adornee = head
+        billboardGui.Size = UDim2.new(0, 200, 0, 100)  -- Adjust size if needed
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)  -- Position above the head
+        billboardGui.Parent = head  -- Parent to the head
+
+        -- Create TextLabel for tools
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Font = Enum.Font.SourceSans  -- Use a thinner font
+        textLabel.TextSize = 22  -- Increased text size for better visibility
+        textLabel.TextStrokeTransparency = 0.5  -- Add a slight stroke for better visibility
+        textLabel.TextScaled = false  -- Prevent text from scaling
+        textLabel.Parent = billboardGui
+
+        -- Function to update the text with tools from the backpack and character
+        local function updateToolList()
+            local drumTools = {}
+            local otherTools = {}
+            local totalToolsCount = 0  -- Counter for tools that aren't ignored
+
+            local function addTools(container)
+                for _, tool in ipairs(container:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        -- Count only tools that are not in the ignore list
+                        if not isIgnored(tool.Name) then
+                            totalToolsCount = totalToolsCount + 1  -- Count non-ignored tools
+                            if tool.Name:sub(-4) == "Drum" then
+                                table.insert(drumTools, tool.Name)  -- Prioritize drum tools
+                            else
+                                table.insert(otherTools, tool.Name)
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Check both Backpack and Character (equipped tools)
+            addTools(player.Backpack)
+            addTools(player.Character)
+
+            -- Combine drum tools with other tools
+            local tools = {}
+            for _, tool in ipairs(drumTools) do
+                table.insert(tools, tool)
+            end
+            for _, tool in ipairs(otherTools) do
+                if #tools < 3 then  -- Ensure we don't exceed the max lines
+                    table.insert(tools, tool)
+                end
+            end
+
+            -- Limit the number of displayed tools
+            local maxLines = 2  -- Maximum number of lines to display
+            if #tools > maxLines then
+                tools = {unpack(tools, 1, maxLines)}  -- Keep only the first `maxLines` tools
+                table.insert(tools, "...")  -- Indicate more tools are available
+            end
+
+            -- Prepare the display text
+            local displayText = table.concat(tools, "\n")
+            if totalToolsCount > 0 then
+                displayText = displayText .. "\n" .. string.format("Guns: %d", totalToolsCount)  -- Show count only if > 0
+            end
+
+            textLabel.Text = displayText  -- Update the text label
+
+            -- Change text color based on presence of Drum tools
+            if #drumTools > 0 then
+                textLabel.TextColor3 = Color3.new(1, 0, 0)  -- Red if there are Drum tools
+            else
+                textLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)  -- Light gray otherwise
+            end
+        end
+
+        -- Connect to the Backpack's ChildAdded and ChildRemoved events
+        player.Backpack.ChildAdded:Connect(updateToolList)
+        player.Backpack.ChildRemoved:Connect(updateToolList)
+
+        -- Connect to the Character's ChildAdded and ChildRemoved events
+        player.Character.ChildAdded:Connect(updateToolList)
+        player.Character.ChildRemoved:Connect(updateToolList)
+
+        -- Initial update
+        updateToolList()
+    end
+
+    -- Create the BillboardGui when the character is added
+    player.CharacterAdded:Connect(function(character)
+        local head = character:WaitForChild("Head")
+        setupBillboard(head)
+
+        -- Update the BillboardGui when the player respawns
+        character.ChildRemoved:Connect(function(child)
+            if child.Name == "Head" then
+                -- If head is removed (player respawns), we need to re-setup the BillboardGui
+                character:WaitForChild("Head")
+                setupBillboard(character.Head)
+            end
+        end)
+    end)
+
+    -- Create the BillboardGui if the character already exists
+    if player.Character then
+        local head = player.Character:WaitForChild("Head")
+        setupBillboard(head)
+    end
+end
+
+-- Function to handle player addition
+local function onPlayerAdded(player)
+    createBillboardGui(player)
+end
+
+-- Connect to PlayerAdded event
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+-- Create BillboardGui for players already in the game
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
